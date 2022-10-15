@@ -1,4 +1,5 @@
 require("@nomiclabs/hardhat-waffle");
+require("@nomiclabs/hardhat-etherscan");
 require("dotenv").config();
 
 /**
@@ -8,12 +9,18 @@ module.exports = {
   networks: {
     aurora: {
       url: `https://mainnet.aurora.dev`,
-      accounts: [process.env.privateKey],
+      accounts: [process.env.privateKey]
     },
     fantom: {
       url: `https://rpc.ftm.tools/`,
-      accounts: [process.env.privateKey],
+      gas: 3000000,
+      accounts: [process.env.privateKey]
     },
+    bsc: {
+      url: 'https://bscrpc.com',
+      gas: 3000000,
+      accounts: [process.env.privateKey]
+    }
   },
   solidity: {
     compilers: [
@@ -22,4 +29,7 @@ module.exports = {
       { version: "0.6.6" }
     ]
   },
+  etherscan: {
+    apiKey: process.env.BSC_API_KEY
+  }
 };

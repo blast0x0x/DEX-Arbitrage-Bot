@@ -1,8 +1,6 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.4;
 
-import "hardhat/console.sol";
-
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 interface IERC20 {
@@ -29,7 +27,7 @@ interface IUniswapV2Pair {
 
 contract Arb is Ownable {
 
-	function swap(address router, address _tokenIn, address _tokenOut, uint256 _amount) private {
+	function swap(address router, address _tokenIn, address _tokenOut, uint256 _amount) public {
 		IERC20(_tokenIn).approve(router, _amount);
 		address[] memory path;
 		path = new address[](2);

