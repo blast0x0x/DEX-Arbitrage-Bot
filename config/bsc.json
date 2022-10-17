@@ -1,5 +1,5 @@
 {
-    "arbContract": "0xC28fbdfeB0BB972595AbeA8a7F775901BBAA33d1",
+    "arbContract": "0x8BBBceEe08bf5A174DeEfB859DA114F08aca8562",
     "minBasisPointsPerTrade": 50,
     "routers": [
       { "dex": "pancakeswap", "address": "0x10ed43c718714eb63d5aa57b78b54704e256024e" },
