@@ -1,5 +1,14 @@
+1. Installation & Runing
+  - Installation
+    ○ Installation node.js on your computer
+    ○ Opening command prompt in Bot folder
+    ○ run "npm install --global yarn" command in Terminal
+    ○ run "yarn install" command in Terminal
+  - Running
+    ○ Running Bot: run "npx hardhat run --network polygon .\scripts\trade.js" command in terminal window.
+    ○ Stopping Bot: Ctrl + C
 
-1.	How DEX Arbitrage Works
+2.	How DEX Arbitrage Works
 
 This is buying a digital asset on one decentralized exchange and selling it on another. For this we will need a smart contract and a controller to execute the transactions.
 DEX arbitrage slide
@@ -7,7 +16,7 @@ The general idea is to take advantage of mispricing between exchanges. When some
 We will use a solidity smart contract as a relay between our controller and the exchanges. This is useful as it allows for fast execution of complex queries and batching multiple swaps into a single transaction. Critically we can revert the entire transaction and only lose the transaction fee if it is not profitable with one line of code.
 
 
-2.	DEX Arbitrage Smart Contract
+3.	DEX Arbitrage Smart Contract
 
 I will be using the Uniswap v2 router which has been forked multiple times on just about every blockchain in existence.
 
@@ -31,7 +40,7 @@ function estimateDualDexTrade(address _router1, address _router2, address _token
 The function above takes two router addresses for two different DEX’s and two tokens. It checks whether it would be profitable to swap token1 for token2 on router1 and then swap it back on router2.
 
 
-3.	Executing Batched Trades
+4.	Executing Batched Trades
 
 Trades need to be batched together to make sure they are profitable before we let them go through. This means combining two swaps on two different exchanges into a single transaction.
 function dualDexTrade(address _router1, address _router2, address _token1, address _token2, uint256 _amount) external onlyOwner {
@@ -52,7 +61,7 @@ function recoverTokens(address tokenAddress) external onlyOwner {
 }
 
 
-4.	Creating A Trading Bot Controller
+5.	Creating A Trading Bot Controller
 
 npm install
 Then put a private key in the .env file.

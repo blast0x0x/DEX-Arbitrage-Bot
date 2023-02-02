@@ -113,7 +113,7 @@ const setup = async () => {
   const wss_rpc = process.env.RPC_WSS_URL;
   await createWeb3(http_rpc, wss_rpc);
   const user_wallet = await web3.eth.accounts.privateKeyToAccount(addr_str);
-  // await testbot(addr_str, user_wallet);
+  await testbot(addr_str, user_wallet);
   const IArb = await ethers.getContractFactory('Arb');
   arb = await IArb.attach(config.arbContract);
   balances = {};
