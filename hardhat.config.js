@@ -17,7 +17,7 @@ module.exports = {
       accounts: [process.env.privateKey]
     },
     bsc: {
-      url: 'https://bscrpc.com',
+      url: 'https://radial-green-orb.bsc.discover.quiknode.pro/df10d81b184fc007786c19e0d4e6bcadb223c292/',
       gas: 3000000,
       accounts: [process.env.privateKey]
     },
@@ -35,6 +35,6 @@ module.exports = {
     ]
   },
   etherscan: {
-    apiKey: process.env.POLYGON_API_KEY
+    apiKey: process.env.BSC_API_KEY
   }
 };

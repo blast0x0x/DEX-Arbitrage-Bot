@@ -5,7 +5,7 @@
     ○ run "npm install --global yarn" command in Terminal
     ○ run "yarn install" command in Terminal
   - Running
-    ○ Running Bot: run "npx hardhat run --network polygon .\scripts\trade.js" command in terminal window.
+    ○ Running Bot: run "npx hardhat run --network bsc .\scripts\trade.js" command in terminal window.
     ○ Stopping Bot: Ctrl + C
 
 2.	How DEX Arbitrage Works
